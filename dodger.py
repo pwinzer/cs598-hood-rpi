@@ -133,7 +133,7 @@ class Game():
 
     def intro(self):
 
-        self.surface.fill((110,10,110))
+        self.surface.fill((10,110,10))
 
         title = pygame.font.Font(None, 60).render("DODGER", True, (255, 255, 255))
 
@@ -202,9 +202,12 @@ class Game():
             
 
             # draw surface
-
-            self.surface.fill((110,10,110))
-
+            if lives == 3:
+              self.surface.fill((10,110,10))
+            elif lives == 2:
+              self.surface.fill((255,160,0))
+            elif lives == 1:
+              self.surface.fill((210,30,30))
             
 
             # draw enemies
