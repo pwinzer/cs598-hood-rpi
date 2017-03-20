@@ -19,26 +19,33 @@ blue = (0,0,255)
 green = (0,255,0)
 gray = (211,211,211)
 tomato = (255,9,71)
+enemy_images = ["mars.png", "pluto.png", "uranus.png"]
 
-
-class Enemy():
+class Enemy(pygame.sprite.Sprite):
     MIN_SIZE = 15
     MAX_SIZE = 40 
 
     def __init__(self):
+        pygame.sprite.Sprite.__init__(self)
         self.size = random.randint(self.MIN_SIZE, self.MAX_SIZE)
+        enemy_image = enemy_images[random.randint(0,len(enemy_images)-1)]
+        self.image = pygame.transform.scale(pygame.image.load(enemy_image), (self.size, self.size))
         self.rect = pygame.Rect(random.randint(0, WIDTH), 0-self.size,
                                 self.size, self.size)
-        self.surface = pygame.Surface((self.rect.width, self.rect.height))
+        #self.rect = self.image.get_rect()
+        #self.surface = pygame.Surface((self.rect.width, self.rect.height))
         self.speed = random.randint(1,5)
-        self.color = (random.randint(130, 255), random.randint(130, 255), random.randint(130, 255))
-        self.surface.fill(self.color)  
+        #self.color = (random.randint(130, 255), random.randint(130, 255), random.randint(130, 255))
+        #self.surface.fill(self.color)  
+        self.plain = pygame.sprite.RenderPlain(self) #PDW#
 
     def move(self, increase):
         self.rect.bottom += self.speed + increase  
 
-    def draw(self, surface):
-        surface.blit(self.surface, self.rect)
+    def draw(self):
+        #used to take surface param
+        #surface.blit(self.surface, self.rect)
+        self.plain.draw(screen)
 
 
 class EnemyManager():
@@ -55,23 +62,37 @@ class EnemyManager():
         return False
 
 
-class Player():
+class Player(pygame.sprite.Sprite):
     def __init__(self, x):
-        self.rect = pygame.Rect(x, HEIGHT-50, 25, 25)
-        self.surface = pygame.Surface((25, 25))
-        self.color = (255, 255, 255)
-        self.surface.fill(self.color)
+        pygame.sprite.Sprite.__init__(self)
+        player_image = "player.png"
+        self.image = pygame.transform.scale(pygame.image.load(player_image), (50, 50))
+        #self.rect = pygame.Rect(x, HEIGHT, 50, 50)
+        self.rect = self.image.get_rect()
+        self.rect.centerx = WIDTH/2
+        self.rect.y = HEIGHT-50
+        #self.surface = pygame.Surface((25, 25))
+        #self.color = (255, 255, 255)
+        #self.surface.fill(self.color)
+        self.plain = pygame.sprite.RenderPlain(self) #PDW#
+        laser_sound = "laser.wav"
+        self.laser_sound = pygame.mixer.Sound(laser_sound) #PDW#
+        self.laser_sound.set_volume(0.15)
         self.projectiles = []
     
     def shoot(self) :
-        p = Projectile(self.rect.centerx, self.rect.centery, self.surface)
+        self.laser_sound.play()
+        p = Projectile(self.rect.centerx, self.rect.centery, screen)
         self.projectiles.append(p)
 
     def remove(self,proj) :
        	self.projectiles.remove(proj)
 		
-    def draw(self, surface):
-        surface.blit(self.surface, self.rect)
+    def draw(self):
+        #used to take surface param
+        #surface.blit(self.surface, self.rect)
+        self.plain.draw(screen)
+
 
     def move(self, dest):
         self.rect.centerx = dest
@@ -99,11 +120,16 @@ class Game():
     def __init__(self, surface):
         pygame.init()
         self.surface = surface
+        explosion_sound = "atari_boom.wav"
+        self.explosion_sound = pygame.mixer.Sound(explosion_sound) #PDW#
+        background_music = "groovy.ogg"
+        self.music = pygame.mixer.Sound(background_music) #PDW#
         self.intro()
     
     def _check_collisions(self, enemies, player):
         for enemy in enemies:
             if enemy.rect.colliderect(player.rect):
+                self.explosion_sound.play()
                 return True
         return False
 		
@@ -130,6 +156,8 @@ class Game():
         ship_horizontal = 20
         ship_vertical = 50       
         
+        self.music.play()
+
         while True:      
             for e in pygame.event.get():
                 if e.type == pygame.QUIT:
@@ -161,6 +189,11 @@ class Game():
             if numbers == []:
                 instructions = pygame.font.SysFont('monospace', 30).render('0', True, tomato)
                 self.surface.blit(instructions, ((WIDTH-instructions.get_rect().width)/2, scores_height + 40))
+            else:
+              for num in range(0,len(numbers)):
+                instructions = pygame.font.SysFont('monospace', 30).render(str(numbers[num]), True, tomato)
+                self.surface.blit(instructions, ((WIDTH-instructions.get_rect().width)/2, scores_height + (40+num*30)))
+            '''
             if len(numbers) >= 1:
                 instructions = pygame.font.SysFont('monospace', 30).render(str(numbers[0]), True, tomato)
                 self.surface.blit(instructions, ((WIDTH-instructions.get_rect().width)/2, scores_height + 40))
@@ -175,8 +208,8 @@ class Game():
                 self.surface.blit(instructions, ((WIDTH-instructions.get_rect().width)/2, scores_height + 130))
             if len(numbers) >= 5:
                 instructions = pygame.font.SysFont('monospace', 30).render(str(numbers[4]), True, tomato)
-                self.surface.blit(instructions, ((WIDTH-instructions.get_rect().width)/2, scores_height + 160))                
-                           
+                self.surface.blit(instructions, ((WIDTH-instructions.get_rect().width)/2, scores_height + 160))
+            '''               
             button("PLAY", 150,450,100,50, white, blue, self.play)
             button("QUIT", 550,450,100,50, white, green, self.quitgame)
             
@@ -217,7 +250,8 @@ class Game():
             # draw enemies
             for enemy in enemies:
                 enemy.move(increase)
-                enemy.draw(self.surface)
+                #enemy.draw(self.surface)
+                enemy.draw()
                 if enemy.rect.top > HEIGHT:
                     enemies.remove(enemy)
             if enemymanager.generate() and len(enemies) < 41:
@@ -236,7 +270,8 @@ class Game():
             screen.blit(text, (600,50))
             
             # draw player
-            player.draw(self.surface)
+            #player.draw(self.surface)
+            player.draw()
 			
             # draw projectiles
             for i in range(0, len(player.projectiles)):
@@ -249,13 +284,15 @@ class Game():
             # check for collisions - if so, remove all enemies and subtract a life
             if self._check_collisions(enemies, player):
                 enemies = []
+                player.projectiles = []
                 lives -= 1
                 if lives > 0:
                     time.sleep(1)
                 if lives == 0:
                     gameover()
-                    numbers = sort_scores()
-                    write_sorted()
+                    #numbers = sort_scores()
+                    #write_sorted()
+                    self.music.stop()
                     self.intro()
 					
             # check for projectile collisions - if so, remove enemy affected
@@ -265,6 +302,8 @@ class Game():
             pygame.display.update()
             clock.tick(60)
         sys.exit(0)
+
+
 #changes color of buttons when hover         
 def button(msg, x, y, w, h, i, a, action = None):
     mouse = pygame.mouse.get_pos()
@@ -316,7 +355,12 @@ def write_score():
     
 
 def gameover():
-    message_display("GAME OVER!")
+    global numbers
+    global score
+    if numbers == [] or score > numbers[0]:
+      message_display("HIGH SCORE!")
+    else:
+      message_display("GAME OVER!")
 		
 def message_display(text):
     largeText = pygame.font.Font('freesansbold.ttf', 100)
